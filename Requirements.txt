@@ -1,0 +1,227 @@
+For a Stock Manager App that integrates with a live API for fetching stock prices, here's a framework for the project based on your provided guidelines. I'll break it down step by step:
+
+1. Title & Team Members
+Title: Stock Manager Application with Live API Integration
+Team Members: [Your names here]
+2. Abstract
+This Stock Manager Application is designed to help users manage their stock portfolio, track stock prices, and perform actions such as buying/selling stocks. It integrates live stock market data by calling a third-party API, allowing real-time price updates. The application offers a user-friendly interface for stock tracking, and uses a database to store user data, stock information, and transaction history.
+
+3. Problem Statement
+Data Requirements:
+Users: Each user should be able to create an account and log in to track their portfolio.
+Stocks: Each stock will have attributes such as stock symbol, company name, current price, and historical data.
+Transactions: Users will be able to perform buy/sell operations. These transactions should record the stock symbol, quantity, transaction type, price, and date/time.
+API Integration: The app should integrate with an external API to fetch the current stock price.
+Functional Requirements:
+User Registration and Login: Authentication to ensure secure access.
+Portfolio Management: Users can add, update, and view stocks in their portfolio.
+Real-Time Price Tracking: Display live prices for stocks using an external API.
+Transaction Management: Record stock purchases and sales in a database.
+Reports: Generate reports for portfolio performance and transaction history.
+4. ER Diagram & Relational Tables
+Entities:
+
+Users: Stores user login information.
+Stocks: Stores information about each stock.
+Portfolio: Tracks stocks owned by the user, their quantities, and purchase price.
+Transactions: Records buying and selling activity.
+StockPrices: Stores live price data fetched from the API.
+ER Diagram:
+
+Users (UserID, Username, Password, Email)
+Stocks (StockID, StockSymbol, CompanyName)
+Portfolio (PortfolioID, UserID, StockID, Quantity, PurchasePrice)
+Transactions (TransactionID, UserID, StockID, Quantity, TransactionType, TransactionPrice, Date)
+StockPrices (StockID, Date, Price)
+5. DDL Commands (SQL to Create Tables)
+sql
+Copy
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY AUTO_INCREMENT,
+    Username VARCHAR(50) NOT NULL,
+    Password VARCHAR(255) NOT NULL,
+    Email VARCHAR(100)
+);
+
+CREATE TABLE Stocks (
+    StockID INT PRIMARY KEY AUTO_INCREMENT,
+    StockSymbol VARCHAR(10) NOT NULL,
+    CompanyName VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Portfolio (
+    PortfolioID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT,
+    StockID INT,
+    Quantity INT,
+    PurchasePrice DECIMAL(10, 2),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (StockID) REFERENCES Stocks(StockID)
+);
+
+CREATE TABLE Transactions (
+    TransactionID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT,
+    StockID INT,
+    Quantity INT,
+    TransactionType ENUM('BUY', 'SELL'),
+    TransactionPrice DECIMAL(10, 2),
+    Date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (StockID) REFERENCES Stocks(StockID)
+);
+
+CREATE TABLE StockPrices (
+    StockID INT,
+    Date DATE,
+    Price DECIMAL(10, 2),
+    PRIMARY KEY (StockID, Date),
+    FOREIGN KEY (StockID) REFERENCES Stocks(StockID)
+);
+6. List of SQL Queries
+Basic Queries:
+
+sql
+Copy
+-- Fetch a stock's current price
+SELECT Price FROM StockPrices WHERE StockID = ? ORDER BY Date DESC LIMIT 1;
+
+-- Fetch all stocks in the user's portfolio
+SELECT Stocks.StockSymbol, Portfolio.Quantity, Portfolio.PurchasePrice
+FROM Portfolio
+JOIN Stocks ON Portfolio.StockID = Stocks.StockID
+WHERE Portfolio.UserID = ?;
+Complex Queries:
+
+sql
+Copy
+-- Get the transaction history of a user
+SELECT Transactions.TransactionType, Stocks.StockSymbol, Transactions.Quantity, Transactions.TransactionPrice, Transactions.Date
+FROM Transactions
+JOIN Stocks ON Transactions.StockID = Stocks.StockID
+WHERE Transactions.UserID = ?
+ORDER BY Transactions.Date DESC;
+Procedures & Triggers:
+
+sql
+Copy
+-- Trigger to update stock price when a transaction is made
+CREATE TRIGGER UpdateStockPrice
+AFTER INSERT ON Transactions
+FOR EACH ROW
+BEGIN
+   -- Assume external API function fetch_stock_price(stock_id) fetches the live stock price
+   DECLARE live_price DECIMAL(10,2);
+   SET live_price = fetch_stock_price(NEW.StockID);
+   INSERT INTO StockPrices (StockID, Date, Price) VALUES (NEW.StockID, CURDATE(), live_price);
+END;
+7. UI Design (with screenshots)
+For the UI Design, you would typically create the following pages:
+
+Login Page: For user authentication.
+Dashboard Page: Displays the user's portfolio with real-time stock prices, total value, and recent transactions.
+Buy/Sell Page: Allows users to buy or sell stocks.
+Transaction History: Lists all transactions made by the user.
+You can use tools like Figma or Sketch for designing the interface and include screenshots here.
+
+8. PL/SQL Procedures/Functions/Triggers
+Function to fetch stock price: This would be a simple function to retrieve live stock data from the API. It could be called after each transaction.
+pl
+Copy
+CREATE OR REPLACE FUNCTION fetch_stock_price(stock_id INT) RETURN DECIMAL IS
+   live_price DECIMAL(10, 2);
+BEGIN
+   -- Example of calling the API (Pseudo code)
+   -- live_price := api_call_to_fetch_price(stock_id);
+   RETURN live_price;
+END;
+9. Java Code for Functional Design (DB Connectivity, API Call)
+The Java application should use JDBC for database connectivity and integrate with a stock price API (like Alpha Vantage, Yahoo Finance, or any free stock API).
+
+Here’s an outline of the Java code:
+
+java
+Copy
+import java.sql.*;
+import java.net.*;
+import java.io.*;
+
+public class StockManagerApp {
+    private static Connection conn;
+
+    public static void connectToDatabase() {
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/stock_manager", "username", "password");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static double fetchStockPriceFromAPI(String stockSymbol) {
+        try {
+            URL url = new URL("https://api.example.com/stock/" + stockSymbol);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String inputLine;
+            StringBuffer response = new StringBuffer();
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+            // Parse the JSON response to extract the stock price
+            return Double.parseDouble(response.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0.0;
+    }
+
+    public static void main(String[] args) {
+        connectToDatabase();
+        String stockSymbol = "AAPL";  // Example stock symbol
+        double livePrice = fetchStockPriceFromAPI(stockSymbol);
+        System.out.println("Live price of " + stockSymbol + ": " + livePrice);
+    }
+}
+10. References
+Here you should mention any APIs you used (e.g., Alpha Vantage, Yahoo Finance), textbooks, documentation, and websites for any frameworks or tools like JDBC.
+
+Evaluation Guidelines Mapping:
+Synopsis, Abstract, Problem Statement (2 Marks): Ensure a clear and concise description.
+Design (ER Diagram, Normalized Tables) (5 Marks): Strong focus on the relationships between entities.
+Demo (Basic Queries, Complex Queries, Procedures, Triggers, DB Connectivity) (8 Marks): Include working examples and functionalities.
+UI Design (2 Marks): Showcase clean and intuitive UI/UX design.
+Report (3 Marks): Well-documented, structured report.
+This framework should help you structure the Stock Manager Application effectively. If you need help with more specific parts like implementing the UI or refining the database queries, feel free to ask!
+
+
+Got it! Here's a list of the tables and their attributes for the Stock Manager Application:
+
+1. Users
+UserID (Primary Key)
+Username
+Password
+Email
+2. Stocks
+StockID (Primary Key)
+StockSymbol
+CompanyName
+3. Portfolio
+PortfolioID (Primary Key)
+UserID (Foreign Key referencing Users)
+StockID (Foreign Key referencing Stocks)
+Quantity
+PurchasePrice
+4. Transactions
+TransactionID (Primary Key)
+UserID (Foreign Key referencing Users)
+StockID (Foreign Key referencing Stocks)
+Quantity
+TransactionType (ENUM: 'BUY', 'SELL')
+TransactionPrice
+Date (Date and time of transaction)
+5. StockPrices
+StockID (Foreign Key referencing Stocks)
+Date (Date of the stock price)
+Price (Stock's price on that date)

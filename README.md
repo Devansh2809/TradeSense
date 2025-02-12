@@ -1,0 +1,2 @@
+# TradeSense
+Stock Portfolio Manager 

@@ -1,0 +1,67 @@
+<!-- templates/market_summary.html -->
+{% extends 'base.html' %}
+
+{% block title %}Market Summary{% endblock %}
+
+{% block content %}
+<div class="container mt-4 text-light">
+    <h3>Market Summary</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <table class="table table-dark table-striped">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>% Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_data %}
+                    <tr>
+                        <td>{{ stock.symbol }}</td>
+                        <td>{{ stock.price }}</td>
+                        <td class="{% if stock.change > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ stock.percent_change }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <canvas id="stockChart" width="400" height="400"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Example Chart.js implementation
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    const chartData = {
+        labels: [{% for stock in stock_data %}"{{ stock.symbol }}",{% endfor %}],
+        datasets: [{
+            label: 'Stock Prices',
+            data: [{% for stock in stock_data %}{{ stock.price }},{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    const config = {
+        type: 'line', // You can use 'bar', 'line', etc.
+        data: chartData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    };
+
+    new Chart(ctx, config);
+</script>
+{% endblock %}
